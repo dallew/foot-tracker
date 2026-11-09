@@ -76,7 +76,7 @@
     <header class="nav">
       <h2>History</h2>
       <div class="nav-actions">
-        <button class="icon-btn" type="button" id="export-btn" aria-label="Export">
+        <button class="icon-btn" type="button" id="export-btn" aria-label="Export and import">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4 4-1.4 1.4L13 6.8V15h-2V6.8L9.4 8.4 8 7l4-4zM5 13h2v6h10v-6h2v8H5v-8z"/></svg>
         </button>
       </div>
@@ -84,7 +84,9 @@
     <div id="export-menu" class="menu" hidden>
       <button type="button" id="export-summary">Export night summaries</button>
       <button type="button" id="export-events">Export raw events</button>
+      <button type="button" id="import-events">Import events from CSV</button>
     </div>
+    <input type="file" id="import-file" accept=".csv,text/csv,text/comma-separated-values,text/plain" hidden>
     <ul id="history-list" class="list"></ul>
   </section>
 
@@ -119,6 +121,14 @@
       <div class="group-label">Colour</div>
       <div class="card" id="theme-list"></div>
       <p class="footnote">Dark red preserves night vision best when logging at 3am.</p>
+
+      <div class="group-label">Data</div>
+      <div class="card">
+        <button class="theme-row" type="button" id="set-export-events">Export raw events (CSV)</button>
+        <button class="theme-row" type="button" id="set-export-summary">Export night summaries (CSV)</button>
+        <button class="theme-row" type="button" id="set-import">Import events from CSV</button>
+      </div>
+      <p class="footnote">Imports use the same columns as the raw events export (timestamp, type, painScore, remedy, note), including exports from the old iPhone app. Entries already in your log are skipped.</p>
 
       <div class="group-label">Sync</div>
       <div class="card">

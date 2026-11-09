@@ -121,3 +121,64 @@ export function summaryCSV(nights) {
   }
   return lines.join('\n');
 }
+
+// ---- CSV import ----
+/** Splits CSV text into rows of fields, handling quoted fields with commas, quotes and newlines. */
+export function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  text = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(f); rows.push(row); row = []; f = '';
+    } else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));
+}
+
+const TYPE_IN = { awake: 'awake', backtobed: 'backToBed', 'back to bed': 'backToBed' };
+const remedyKey = v => {
+  if (!v) return null;
+  const t = v.trim().toLowerCase();
+  const hit = REMEDIES.find(([k, l]) => k.toLowerCase() === t || l.toLowerCase() === t);
+  return hit ? hit[0] : undefined;   // undefined = not recognised
+};
+
+/**
+ * Reads a raw-events CSV (timestamp,type,painScore,remedy,note) into events.
+ * Returns { events, invalid } where invalid lists "row N: reason" strings.
+ */
+export function eventsFromCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) return { events: [], invalid: ['The file is empty.'] };
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const col = n => head.indexOf(n.toLowerCase());
+  const iT = col('timestamp'), iType = col('type'), iP = col('painScore'), iR = col('remedy'), iN = col('note');
+  if (iT < 0 || iType < 0) return { events: [], invalid: ['This isn’t a raw events export: it needs “timestamp” and “type” columns.'] };
+  const events = [], invalid = [];
+  rows.slice(1).forEach((r, idx) => {
+    const n = idx + 2;
+    const ts = new Date((r[iT] || '').trim());
+    if (isNaN(ts)) { invalid.push(`row ${n}: unreadable time “${r[iT] || ''}”`); return; }
+    const type = TYPE_IN[(r[iType] || '').trim().toLowerCase()];
+    if (!type) { invalid.push(`row ${n}: unknown type “${r[iType] || ''}”`); return; }
+    let pain = null;
+    const pRaw = iP >= 0 ? (r[iP] || '').trim() : '';
+    if (pRaw !== '') {
+      pain = Number(pRaw);
+      if (!Number.isInteger(pain) || pain < 0 || pain > 10) { invalid.push(`row ${n}: pain score “${pRaw}” isn’t 0–10`); return; }
+    }
+    const remedy = iR >= 0 ? remedyKey(r[iR]) : null;
+    if (remedy === undefined) { invalid.push(`row ${n}: unknown remedy “${r[iR]}”`); return; }
+    const note = iN >= 0 ? (r[iN] || '').trim() || null : null;
+    events.push({ timestamp: ts, type, painScore: pain, remedy, note });
+  });
+  return { events, invalid };
+}

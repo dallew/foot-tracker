@@ -1,5 +1,5 @@
 // Bump VERSION whenever files change so installed copies drop the old cache.
-const VERSION = 'fuf-v1';
+const VERSION = 'fuf-v2';
 const FILES = ['./', './index.html', './app.css', './app.js', './model.js', './store.js', './config.js',
   './firebase.js', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {

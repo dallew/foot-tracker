@@ -68,6 +68,14 @@ async function firebaseStore() {
       for (const k of ['type', 'painScore', 'remedy', 'note']) if (k in patch) d[k] = patch[k] ?? null;
       fb.updateDoc(evRef(id), d).catch(writeErr);
     },
+    /** Adds many events in batches of up to 450 writes (Firestore allows 500 per batch). */
+    addMany(evs) {
+      for (let i = 0; i < evs.length; i += 450) {
+        const b = fb.writeBatch(db);
+        evs.slice(i, i + 450).forEach(ev => b.set(evRef(ev.id), toDoc(ev, fb)));
+        b.commit().catch(writeErr);
+      }
+    },
     remove(id) { fb.deleteDoc(evRef(id)).catch(writeErr); },
     removeMany(ids) {
       const b = fb.writeBatch(db);
@@ -115,6 +123,10 @@ function demoStore() {
       const r = rows.find(x => x.id === id); if (!r) return;
       if ('timestamp' in patch) r.t = patch.timestamp.getTime();
       for (const k of ['type', 'painScore', 'remedy', 'note']) if (k in patch) r[k] = patch[k] ?? null;
+      emit();
+    },
+    addMany(evs) {
+      for (const ev of evs) rows.push({ id: ev.id, t: ev.timestamp.getTime(), type: ev.type, painScore: ev.painScore ?? null, remedy: ev.remedy ?? null, note: ev.note ?? null });
       emit();
     },
     remove(id) { rows = rows.filter(r => r.id !== id); emit(); },

@@ -1,6 +1,6 @@
 import { createStore } from './store.js';
 import { EVENT_LABEL, REMEDIES, remedyLabel, PAIN, THEMES, nightStart, groupNights, metrics, fmtDuration,
-  clipboardLine, nextType, wakeCountTonight, eventsCSV, summaryCSV } from './model.js';
+  clipboardLine, nextType, wakeCountTonight, eventsCSV, summaryCSV, eventsFromCSV } from './model.js';
 
 const $ = id => document.getElementById(id);
 const fmtNight = d => d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -99,6 +99,21 @@ function buildStatic() {
   $('export-events').addEventListener('click', () => { $('export-menu').hidden = true; share(eventsCSV(state.events), 'NightLog.csv'); });
   $('export-summary').addEventListener('click', () => {
     $('export-menu').hidden = true; share(summaryCSV(groupNights(state.events, state.settings.nightStartHour)), 'NightLog-Summary.csv');
+  });
+
+  $('import-events').addEventListener('click', () => { $('export-menu').hidden = true; $('import-file').click(); });
+  $('set-import').addEventListener('click', () => $('import-file').click());
+  $('set-export-events').addEventListener('click', () => {
+    if (!state.events.length) { toast('Nothing to export yet'); return; }
+    share(eventsCSV(state.events), 'NightLog.csv');
+  });
+  $('set-export-summary').addEventListener('click', () => {
+    if (!state.events.length) { toast('Nothing to export yet'); return; }
+    share(summaryCSV(groupNights(state.events, state.settings.nightStartHour)), 'NightLog-Summary.csv');
+  });
+  $('import-file').addEventListener('change', async e => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (file) await importFile(file);
   });
 
   $('history-list').addEventListener('click', e => {
@@ -212,7 +227,7 @@ function renderSummary() {
 // ------------------------------------------------------------- history
 function renderHistory() {
   const nights = groupNights(state.events, state.settings.nightStartHour);
-  $('export-btn').disabled = !state.events.length;
+  $('export-events').disabled = $('export-summary').disabled = !state.events.length;
   if (!nights.length) {
     $('history-list').innerHTML = '';
     if (!$('view-history').querySelector('.empty')) $('history-list').insertAdjacentHTML('afterend', '<div class="empty" id="history-empty"><strong>No nights logged yet</strong>Past nights will appear here.</div>');
@@ -280,6 +295,36 @@ function renderStatus() {
   $('sync-status').textContent = text;
 }
 
+// ------------------------------------------------------------- import
+async function importFile(file) {
+  let text;
+  try { text = await file.text(); } catch { toast('Couldn’t read that file'); return; }
+  const { events, invalid } = eventsFromCSV(text);
+  // Skip anything already logged: same type at the same minute.
+  const key = e => e.type + '@' + Math.floor(e.timestamp.getTime() / 60000);
+  const seen = new Set(state.events.map(key));
+  const fresh = [];
+  let dupes = 0;
+  for (const ev of events) {
+    const k = key(ev);
+    if (seen.has(k)) { dupes++; continue; }
+    seen.add(k); fresh.push({ ...ev, id: uuid() });
+  }
+  const parts = [];
+  if (dupes) parts.push(`${dupes} already in your log will be skipped.`);
+  if (invalid.length) parts.push(`${invalid.length} row${invalid.length === 1 ? '' : 's'} couldn’t be read (${invalid.slice(0, 2).join('; ')}${invalid.length > 2 ? '; …' : ''}).`);
+  if (!fresh.length) {
+    await confirmBox('Nothing to import', parts.join(' ') || 'The file has no events.', 'OK', { danger: false, cancel: false });
+    return;
+  }
+  const nights = new Set(fresh.map(e => nightStart(e.timestamp, state.settings.nightStartHour).getTime())).size;
+  const ok = await confirmBox(`Import ${fresh.length} event${fresh.length === 1 ? '' : 's'}?`,
+    `From ${file.name}, across ${nights} night${nights === 1 ? '' : 's'}. ${parts.join(' ')}`.trim(), 'Import', { danger: false });
+  if (!ok) return;
+  store.addMany(fresh);
+  toast(`Imported ${fresh.length} event${fresh.length === 1 ? '' : 's'}`);
+}
+
 // ------------------------------------------------------------- helpers
 let toastTimer;
 function toast(text) {
@@ -287,9 +332,11 @@ function toast(text) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1500);
 }
 
-function confirmBox(title, msg, yes) {
+function confirmBox(title, msg, yes, { danger = true, cancel = true } = {}) {
   return new Promise(resolve => {
     $('confirm-title').textContent = title; $('confirm-msg').textContent = msg; $('confirm-yes').textContent = yes;
+    $('confirm-yes').className = 'btn ' + (danger ? 'danger' : 'primary');
+    $('confirm-no').hidden = !cancel;
     $('confirm').hidden = false;
     const done = v => { $('confirm').hidden = true; $('confirm-yes').onclick = $('confirm-no').onclick = null; resolve(v); };
     $('confirm-yes').onclick = () => done(true);

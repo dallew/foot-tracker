@@ -158,3 +158,4 @@ button{cursor:pointer}
 .confirm-panel p{margin:0 0 6px;color:var(--muted);font-size:15px;line-height:1.35}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.menu button:disabled{opacity:.4}
