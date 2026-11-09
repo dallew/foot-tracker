@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Each signed-in person can read and write only their own settings and events.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      match /events/{eventId} {
+        allow read, delete: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && request.resource.data.type in ['awake', 'backToBed']
+          && request.resource.data.ts is timestamp
+          && (request.resource.data.painScore == null
+              || (request.resource.data.painScore is int
+                  && request.resource.data.painScore >= 0 && request.resource.data.painScore <= 10));
+      }
+    }
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Dalle's FUF</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FUF">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0805">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+  <!-- Sign-in -->
+  <section id="view-signin" class="view signin" hidden>
+    <h1 class="title">Dalle' Fucked Up<br>Feet Monitor</h1>
+    <form id="signin-form" class="card form" novalidate>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" inputmode="email" required>
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <p id="signin-error" class="error" role="alert"></p>
+      <button class="btn primary" type="submit" id="signin-btn">Sign in</button>
+      <button class="btn link" type="button" id="reset-btn">Forgot password?</button>
+    </form>
+  </section>
+
+  <!-- Setup needed (no Firebase config yet) -->
+  <section id="view-setup" class="view signin" hidden>
+    <h1 class="title">Almost ready</h1>
+    <p class="muted center">This app hasn't been connected to its database yet.</p>
+  </section>
+
+  <!-- Night -->
+  <section id="view-night" class="view night" hidden>
+    <div id="night-main" class="night-main">
+      <h1 class="title big">Dalle' Fucked Up<br>Feet Monitor</h1>
+      <div class="status"><span id="clock">--:--</span><span id="wake-count">0 wakes tonight</span></div>
+      <div class="spacer"></div>
+      <button id="btn-awake" class="log-btn prominent" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5C6.5 5 2.7 9.3 1.5 12c1.2 2.7 5 7 10.5 7s9.3-4.3 10.5-7C21.3 9.3 17.5 5 12 5zm0 11a4 4 0 110-8 4 4 0 010 8z"/></svg>
+        <span>AWAKE</span>
+      </button>
+      <button id="btn-bed" class="log-btn" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18v-6.5A2.5 2.5 0 015.5 9H11v4h11v5h-2v-2H5v2H3zm4-6a2 2 0 110-4 2 2 0 010 4zm6-3h6a3 3 0 013 3v0h-9V9z"/></svg>
+        <span>BACK TO BED</span>
+      </button>
+      <div class="spacer"></div>
+    </div>
+    <div id="pain-list" class="option-list" hidden>
+      <p class="list-title">Pain?</p>
+      <div id="pain-options" class="options"></div>
+      <button class="option cancel" type="button" data-cancel>Cancel — remove this entry</button>
+    </div>
+    <div id="remedy-list" class="option-list" hidden>
+      <p class="list-title">What fixed it?</p>
+      <div id="remedy-options" class="options tall"></div>
+      <button class="option cancel" type="button" data-cancel>Cancel — remove this entry</button>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="view-summary" class="view page" hidden>
+    <header class="nav"><h2>Morning Summary</h2></header>
+    <div id="summary-body" class="summary"></div>
+  </section>
+
+  <!-- History -->
+  <section id="view-history" class="view page" hidden>
+    <header class="nav">
+      <h2>History</h2>
+      <div class="nav-actions">
+        <button class="icon-btn" type="button" id="export-btn" aria-label="Export">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4 4-1.4 1.4L13 6.8V15h-2V6.8L9.4 8.4 8 7l4-4zM5 13h2v6h10v-6h2v8H5v-8z"/></svg>
+        </button>
+      </div>
+    </header>
+    <div id="export-menu" class="menu" hidden>
+      <button type="button" id="export-summary">Export night summaries</button>
+      <button type="button" id="export-events">Export raw events</button>
+    </div>
+    <ul id="history-list" class="list"></ul>
+  </section>
+
+  <!-- Night detail -->
+  <section id="view-detail" class="view page" hidden>
+    <header class="nav">
+      <button class="back" type="button" id="detail-back">‹ History</button>
+      <h2 id="detail-title">Night</h2>
+      <div class="nav-actions">
+        <button class="icon-btn" type="button" id="add-event-btn" aria-label="Add event">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+        </button>
+      </div>
+    </header>
+    <ul id="detail-list" class="list"></ul>
+    <div class="detail-footer">
+      <button class="btn danger-outline" type="button" id="delete-night-btn">Delete this whole night</button>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="view-settings" class="view page" hidden>
+    <header class="nav"><h2>Settings</h2></header>
+    <div class="settings">
+      <div class="group-label">Night</div>
+      <div class="card row">
+        <label for="night-start">Night starts at</label>
+        <select id="night-start"></select>
+      </div>
+      <p class="footnote">Events belong to the night that begins at this hour and runs until the same hour the next day. Changing it regroups all history.</p>
+
+      <div class="group-label">Colour</div>
+      <div class="card" id="theme-list"></div>
+      <p class="footnote">Dark red preserves night vision best when logging at 3am.</p>
+
+      <div class="group-label">Sync</div>
+      <div class="card">
+        <div class="row"><span>Status</span><span id="sync-status" class="muted">—</span></div>
+        <div class="row"><span>Signed in as</span><span id="signed-in-as" class="muted ellipsis">—</span></div>
+      </div>
+      <p class="footnote">Entries save on this phone instantly and sync to your account whenever there's a connection.</p>
+      <button class="btn danger-outline" type="button" id="signout-btn">Sign out</button>
+    </div>
+  </section>
+
+  <!-- Tab bar -->
+  <nav id="tabbar" class="tabbar" hidden>
+    <button type="button" data-tab="night" aria-label="Night">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.3A8.5 8.5 0 018.7 4 8.5 8.5 0 1020 15.3z"/></svg><span>Night</span>
+    </button>
+    <button type="button" data-tab="summary" aria-label="Summary">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a6 6 0 016 6H6a6 6 0 016-6zM2 15h20v2H2zm9-12h2v3h-2zM4.2 6.6l1.4-1.4 2.1 2.1-1.4 1.4zm12.1.7l2.1-2.1 1.4 1.4-2.1 2.1zM7 19h10v2H7z"/></svg><span>Summary</span>
+    </button>
+    <button type="button" data-tab="history" aria-label="History">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2v2H4zm4 0h12v2H8zM4 11h2v2H4zm4 0h12v2H8zM4 17h2v2H4zm4 0h12v2H8z"/></svg><span>History</span>
+    </button>
+    <button type="button" data-tab="settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 000-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 00-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 00-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 000 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 001.7 1L11 21h4l.4-2.7a7.4 7.4 0 001.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/></svg><span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- Edit sheet -->
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <form id="edit-form" class="sheet-panel" novalidate>
+      <header class="sheet-head">
+        <button class="btn link" type="button" data-close>Cancel</button>
+        <h3 id="sheet-title">Edit Event</h3>
+        <button class="btn link strong" type="submit">Done</button>
+      </header>
+      <div class="card">
+        <div class="row"><label for="ed-type">Type</label>
+          <select id="ed-type"><option value="awake">Awake</option><option value="backToBed">Back to Bed</option></select></div>
+        <div class="row"><label for="ed-time">Time</label><input id="ed-time" type="datetime-local"></div>
+        <div class="row"><label for="ed-pain">Pain score</label><select id="ed-pain"></select></div>
+        <div class="row"><label for="ed-remedy">Remedy</label><select id="ed-remedy"></select></div>
+        <div class="row col"><label for="ed-note">Note</label><textarea id="ed-note" rows="2" placeholder="Optional"></textarea></div>
+      </div>
+      <button class="btn danger-outline" type="button" id="ed-delete">Delete event</button>
+    </form>
+  </div>
+
+  <!-- In-page confirm (the browser's own confirm dialogs are avoided) -->
+  <div id="confirm" class="sheet" hidden>
+    <div class="sheet-backdrop"></div>
+    <div class="confirm-panel" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+      <h3 id="confirm-title"></h3>
+      <p id="confirm-msg"></p>
+      <button class="btn danger" type="button" id="confirm-yes"></button>
+      <button class="btn" type="button" id="confirm-no">Cancel</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
